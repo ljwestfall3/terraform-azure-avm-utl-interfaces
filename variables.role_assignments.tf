@@ -15,11 +15,32 @@ The scope at which the role assignments should be created. Used to look up role 
 
 Must be specified when `role_assignments` are defined.
 DESCRIPTION
+
+  validation {
+    condition     = length(var.role_assignments) > 0 ? var.role_assignment_definition_scope != null : true
+    error_message = "The role_assignment_definition_scope variable must be set when role_assignments are defined."
+  }
+}
+
+variable "role_assignment_name_use_random_uuid" {
+  type        = bool
+  default     = false
+  description = <<DESCRIPTION
+A control to use a random UUID for the role assignment name.
+If set to false, the name will be a deterministic UUID based on the principal ID and role definition resource ID,
+though this can cause issues with duplicate UUIDs as the scope of the role assignment is not taken into account.
+
+This is default to false to preserve existing behaviour.
+However, we recommend this is set to true to avoid resources becoming re-created due to computed attribute changes in the resource graph.
+
+When this is set to true, you must not change the principal or role definition values in the `role_assignments` map after the initial creation of the role assignments as this will cause errors.
+Instead, use a new key in the map with the new values and remove the old entry.
+DESCRIPTION
+  nullable    = false
 }
 
 variable "role_assignments" {
   type = map(object({
-    name                                   = optional(string, null)
     role_definition_id_or_name             = string
     principal_id                           = string
     description                            = optional(string, null)
@@ -35,7 +56,6 @@ variable "role_assignments" {
   Do not change principal or role definition values in this map after the initial creation of the role assignments as this will cause errors.
   Instead, add a new entry to the map with a new key and remove the old entry.
 
-  - `name` - (Optional) The name of the role assignment. If not set, a random UUID will be generated. Changing this forces the creation of a new resource.
   - `role_definition_id_or_name` - The ID or name of the role definition to assign to the principal.
   - `principal_id` - The ID of the principal to assign the role to.
   - `description` - (Optional) The description of the role assignment.
@@ -46,16 +66,4 @@ variable "role_assignments" {
   - `principal_type` - (Optional) The type of the `principal_id`. Possible values are `User`, `Group` and `ServicePrincipal`. It is necessary to explicitly set this attribute when creating role assignments if the principal creating the assignment is constrained by ABAC rules that filters on the PrincipalType attribute.
 DESCRIPTION
   nullable    = false
-
-  validation {
-    error_message = "If role_assignments are specified and role_assignment_definition_lookup_enabled is true, then role_assignment_definition_scope must be set."
-    condition     = length(var.role_assignments) > 0 && var.role_assignment_definition_lookup_enabled ? var.role_assignment_definition_scope != null : true
-  }
-  validation {
-    error_message = "Each role_assignments `name`, when supplied, must be a valid lowercase GUID (e.g. 11111111-1111-1111-1111-111111111111)."
-    condition = alltrue([
-      for ra in var.role_assignments :
-      ra.name == null || can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", ra.name))
-    ])
-  }
 }

@@ -2,7 +2,6 @@ variable "private_endpoints" {
   type = map(object({
     name = optional(string, null)
     role_assignments = optional(map(object({
-      name                                   = optional(string, null)
       role_definition_id_or_name             = string
       principal_id                           = string
       description                            = optional(string, null)
@@ -13,9 +12,8 @@ variable "private_endpoints" {
       principal_type                         = optional(string, null)
     })), {})
     lock = optional(object({
-      kind  = string
-      name  = optional(string, null)
-      notes = optional(string, null)
+      kind = string
+      name = optional(string, null)
     }), null)
     tags                                    = optional(map(string), null)
     subnet_resource_id                      = string
@@ -30,7 +28,6 @@ variable "private_endpoints" {
     ip_configurations = optional(map(object({
       name               = string
       private_ip_address = string
-      member_name        = optional(string)
     })), {})
   }))
   default     = {}
@@ -39,7 +36,6 @@ variable "private_endpoints" {
 
   - `name` - (Optional) The name of the private endpoint. One will be generated if not set.
   - `role_assignments` - (Optional) This module does not do anything with this, it is used by the parent module to create role assignments.
-    - `name` - (Optional) The name of the role assignment. If not set, a random UUID will be generated. Changing this forces the creation of a new resource.
     - `role_definition_id_or_name` - The ID or name of the role definition to assign.
     - `principal_id` - The ID of the principal to assign the role to.
     - `description` - (Optional) A description of the role assignment.
@@ -51,7 +47,6 @@ variable "private_endpoints" {
   - `lock` - (Optional) This module does not do anything with this, it is used by the parent module to create locks assignments.
     - `kind` - (Required) The type of lock. Possible values are `\"CanNotDelete\"` and `\"ReadOnly\"`.
     - `name` - (Optional) The name of the lock. If not specified, a name will be generated based on the `kind` value. Changing this forces the creation of a new resource.
-    - `notes` - (Optional) Notes about the lock. This value maps to `Microsoft.Authorization/locks.properties.notes`.
   - `tags` - (Optional) A mapping of tags to assign to the private endpoint.
   - `subnet_resource_id` - The resource ID of the subnet to deploy the private endpoint in.
   - `subresource_name` - The name of the sub resource for the private endpoint.
@@ -65,25 +60,8 @@ variable "private_endpoints" {
   - `ip_configurations` - (Optional) A map of IP configurations to create on the private endpoint. If not specified the platform will create one. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
     - `name` - The name of the IP configuration.
     - `private_ip_address` - The private IP address of the IP configuration.
-    - `member_name` - The private IP configuration member name.
   DESCRIPTION
   nullable    = false
-
-  validation {
-    error_message = "If private endpoint role_assignments are specified and role_assignment_definition_lookup_enabled is true, then role_assignment_definition_scope must be set."
-    condition = anytrue([
-      for pe in var.private_endpoints : length(pe.role_assignments) > 0
-    ]) && var.role_assignment_definition_lookup_enabled ? var.role_assignment_definition_scope != null : true
-  }
-  validation {
-    error_message = "Each private endpoint role assignment `name`, when supplied, must be a valid lowercase GUID (e.g. 11111111-1111-1111-1111-111111111111)."
-    condition = alltrue(flatten([
-      for pe in var.private_endpoints : [
-        for ra in pe.role_assignments :
-        ra.name == null || can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", ra.name))
-      ]
-    ]))
-  }
 }
 
 variable "private_endpoints_manage_dns_zone_group" {
