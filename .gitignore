@@ -49,3 +49,6 @@ avm.tflint_module.merged.hcl
 .DS_Store
 
 dist/**
+examples/*/policy
+*.mptfbackup
+.avm
