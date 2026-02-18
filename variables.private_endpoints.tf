@@ -28,6 +28,7 @@ variable "private_endpoints" {
     ip_configurations = optional(map(object({
       name               = string
       private_ip_address = string
+      member_name        = optional(string)
     })), {})
   }))
   default     = {}
@@ -60,8 +61,16 @@ variable "private_endpoints" {
   - `ip_configurations` - (Optional) A map of IP configurations to create on the private endpoint. If not specified the platform will create one. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
     - `name` - The name of the IP configuration.
     - `private_ip_address` - The private IP address of the IP configuration.
+    - `member_name` - The private IP configuration member name.
   DESCRIPTION
   nullable    = false
+
+  validation {
+    error_message = "If private endpoint role_assignments are specified and role_assignment_definition_lookup_enabled is true, then role_assignment_definition_scope must be set."
+    condition = anytrue([
+      for pe in var.private_endpoints : length(pe.role_assignments) > 0
+    ]) && var.role_assignment_definition_lookup_enabled ? var.role_assignment_definition_scope != null : true
+  }
 }
 
 variable "private_endpoints_manage_dns_zone_group" {
