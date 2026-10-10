@@ -2,6 +2,7 @@ variable "private_endpoints" {
   type = map(object({
     name = optional(string, null)
     role_assignments = optional(map(object({
+      name                                   = optional(string, null)
       role_definition_id_or_name             = string
       principal_id                           = string
       description                            = optional(string, null)
@@ -28,6 +29,7 @@ variable "private_endpoints" {
     ip_configurations = optional(map(object({
       name               = string
       private_ip_address = string
+      member_name        = optional(string)
     })), {})
   }))
   default     = {}
@@ -36,6 +38,7 @@ variable "private_endpoints" {
 
   - `name` - (Optional) The name of the private endpoint. One will be generated if not set.
   - `role_assignments` - (Optional) This module does not do anything with this, it is used by the parent module to create role assignments.
+    - `name` - (Optional) The name of the role assignment. If not set, a random UUID will be generated. Changing this forces the creation of a new resource.
     - `role_definition_id_or_name` - The ID or name of the role definition to assign.
     - `principal_id` - The ID of the principal to assign the role to.
     - `description` - (Optional) A description of the role assignment.
@@ -60,6 +63,7 @@ variable "private_endpoints" {
   - `ip_configurations` - (Optional) A map of IP configurations to create on the private endpoint. If not specified the platform will create one. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
     - `name` - The name of the IP configuration.
     - `private_ip_address` - The private IP address of the IP configuration.
+    - `member_name` - The private IP configuration member name.
   DESCRIPTION
   nullable    = false
 
@@ -68,6 +72,15 @@ variable "private_endpoints" {
     condition = anytrue([
       for pe in var.private_endpoints : length(pe.role_assignments) > 0
     ]) && var.role_assignment_definition_lookup_enabled ? var.role_assignment_definition_scope != null : true
+  }
+  validation {
+    error_message = "Each private endpoint role assignment `name`, when supplied, must be a valid lowercase GUID (e.g. 11111111-1111-1111-1111-111111111111)."
+    condition = alltrue(flatten([
+      for pe in var.private_endpoints : [
+        for ra in pe.role_assignments :
+        ra.name == null || can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", ra.name))
+      ]
+    ]))
   }
 }
 
